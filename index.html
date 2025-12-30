@@ -1,0 +1,1370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TXT</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.ico">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#000;
+      --text:#fff;
+      --muted:rgba(255,255,255,.72);
+      --border:rgba(255,255,255,.12);
+      --accent:rgba(255,255,255,.18);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --topbar-h: 38px;
+      --pad-x: 18px;
+      --pad-y: 16px;
+      --line: 1.55;
+      color-scheme: dark;
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      height:100%;
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      overflow:hidden;
+    }
+
+    #topbar{
+      position:fixed;
+      inset:0 0 auto 0;
+      height:var(--topbar-h);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:0 var(--pad-x);
+      background:rgba(0,0,0,.96);
+      border-bottom:1px solid var(--border);
+      font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      z-index:5;
+      user-select:none;
+      white-space:nowrap;
+      overflow:hidden;
+    }
+
+    #leftBar, #midBar, #rightBar{
+      display:flex;
+      align-items:center;
+      min-width:0;
+    }
+
+    #leftBar{ flex:0 0 auto; }
+
+    #domainLink{
+      color:var(--text);
+      font-weight:600;
+      letter-spacing:.2px;
+      max-width:45vw;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      text-decoration:none;
+    }
+
+    #domainLink:hover{
+      text-decoration:underline;
+      text-decoration-color:rgba(255,255,255,.35);
+      text-underline-offset:2px;
+    }
+
+    #midBar{
+      flex:1 1 auto;
+      gap:12px;
+      color:var(--muted);
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    #lines{
+      cursor:pointer;
+      padding:2px 6px;
+      border-radius:6px;
+    }
+    #lines:hover{
+      background:rgba(255,255,255,.06);
+    }
+
+    #langSelect{
+      appearance:auto;
+      background:#000;
+      color:var(--muted);
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:4px 8px;
+      margin:0;
+      font: inherit;
+      outline:none;
+      cursor:pointer;
+      max-width:48vw;
+      color-scheme: dark;
+    }
+    #langSelect:focus{
+      border-color:rgba(255,255,255,.30);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.10);
+    }
+
+    #langSelect option{
+      background:#000;
+      color:#fff;
+    }
+    #langSelect option:checked{
+      background:#111;
+      color:#fff;
+    }
+    #langSelect option:hover,
+    #langSelect option:focus{
+      background:#111;
+      color:#fff;
+    }
+
+    #downloadBtn{
+      margin-left:10px;
+      width:30px;
+      height:30px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+      color:var(--muted);
+      border:1px solid var(--border);
+      border-radius:8px;
+      cursor:pointer;
+      outline:none;
+      flex:0 0 auto;
+    }
+
+    #downloadBtn:hover{
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.86);
+    }
+
+    #downloadBtn:active{
+      background:rgba(255,255,255,.10);
+    }
+
+    #downloadBtn:focus-visible{
+      border-color:rgba(255,255,255,.30);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.10);
+    }
+
+    #downloadBtn svg{
+      width:16px;
+      height:16px;
+      display:block;
+    }
+
+    #editorWrap{
+      position:fixed;
+      inset:var(--topbar-h) 0 0 0;
+      background:var(--bg);
+    }
+
+    #scroller{
+      position:absolute;
+      inset:0;
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #layer{
+      position:relative;
+      width:100%;
+      height:100%;
+    }
+
+    #highlight, #text{
+      position:absolute;
+      inset:0;
+      margin:0;
+      padding:var(--pad-y) var(--pad-x);
+      font-family:var(--mono);
+      font-size:14px;
+      line-height:var(--line);
+      tab-size:2;
+      -moz-tab-size:2;
+      border:0;
+      outline:none;
+      overflow:hidden;
+      text-indent:0;
+      direction:ltr;
+      white-space:pre;
+    }
+
+    body.wrap #highlight,
+    body.wrap #text{
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+
+    #highlight{ pointer-events:none; }
+
+    #highlight code{
+      display:block;
+      min-height:100%;
+      padding:0 !important;
+      margin:0 !important;
+      white-space:inherit;
+      font-family:inherit !important;
+      font-size:inherit !important;
+      line-height:inherit !important;
+    }
+
+    #text{
+      resize:none;
+      background:transparent;
+      color:transparent;
+      caret-color:var(--text);
+      text-shadow:none;
+      touch-action: pan-x pan-y;
+    }
+
+    #text::selection{ background:var(--accent); }
+
+    .hljs{
+      background:transparent !important;
+      padding:0 !important;
+      margin:0 !important;
+    }
+
+    #measure{
+      position:absolute;
+      left:-99999px;
+      top:-99999px;
+      visibility:hidden;
+      margin:0;
+      padding:var(--pad-y) var(--pad-x);
+      font-family:var(--mono);
+      font-size:14px;
+      line-height:var(--line);
+      tab-size:2;
+      -moz-tab-size:2;
+      white-space:pre;
+    }
+
+    body.wrap #measure{
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="topbar">
+    <div id="leftBar">
+      <a id="domainLink" href="#" title="Open empty editor (clears URL text)"></a>
+    </div>
+
+    <div id="midBar">
+      <span id="chars"></span>
+      <span id="lines" title="Toggle line wrapping"></span>
+    </div>
+
+    <div id="rightBar">
+      <select id="langSelect" title="Language"></select>
+
+      <button id="downloadBtn" type="button" title="Download">
+        <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+          width="1024.000000pt" height="1280.000000pt" viewBox="0 0 1024.000000 1280.000000"
+          preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+          <g transform="translate(0.000000,1280.000000) scale(0.100000,-0.100000)"
+            fill="currentColor" stroke="none">
+            <path d="M3230 9905 l0 -2895 -1136 -2 -1135 -3 1072 -1330 c589 -731 1524
+-1891 2077 -2577 553 -687 1008 -1248 1012 -1248 6 0 511 625 3363 4165 l798
+990 -1136 3 -1135 2 0 2895 0 2895 -1890 0 -1890 0 0 -2895z"/>
+            <path d="M0 810 l0 -810 5120 0 5120 0 0 810 0 810 -5120 0 -5120 0 0 -810z"/>
+          </g>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="editorWrap">
+    <div id="scroller">
+      <div id="layer">
+        <pre id="highlight" aria-hidden="true"><code id="code" class="hljs"></code></pre>
+        <textarea id="text" wrap="off" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+      </div>
+    </div>
+    <pre id="measure" aria-hidden="true"></pre>
+  </div>
+
+  <script>
+    const LZString = (function(){
+      const f = String.fromCharCode;
+      const keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+      const baseReverseDic = Object.create(null);
+
+      function getBaseValue(alphabet, character) {
+        if (!baseReverseDic[alphabet]) {
+          baseReverseDic[alphabet] = Object.create(null);
+          for (let i = 0; i < alphabet.length; i++) baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+        }
+        return baseReverseDic[alphabet][character];
+      }
+
+      function compressToEncodedURIComponent(input) {
+        if (input == null) return "";
+        return _compress(input, 6, function(a){ return keyStrUriSafe.charAt(a); });
+      }
+
+      function decompressFromEncodedURIComponent(input) {
+        if (input == null) return "";
+        if (input === "") return null;
+        input = input.replace(/ /g, "+");
+        return _decompress(input.length, 32, function(index){ return getBaseValue(keyStrUriSafe, input.charAt(index)); });
+      }
+
+      function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+        if (uncompressed == null) return "";
+        let i, value;
+        const context_dictionary = Object.create(null);
+        const context_dictionaryToCreate = Object.create(null);
+        let context_c = "";
+        let context_wc = "";
+        let context_w = "";
+        let context_enlargeIn = 2;
+        let context_dictSize = 3;
+        let context_numBits = 2;
+        let context_data = [];
+        let context_data_val = 0;
+        let context_data_position = 0;
+
+        for (let ii = 0; ii < uncompressed.length; ii++) {
+          context_c = uncompressed.charAt(ii);
+          if (context_dictionary[context_c] == null) {
+            context_dictionary[context_c] = context_dictSize++;
+            context_dictionaryToCreate[context_c] = true;
+          }
+
+          context_wc = context_w + context_c;
+          if (context_dictionary[context_wc] != null) {
+            context_w = context_wc;
+          } else {
+            if (context_dictionaryToCreate[context_w] != null) {
+              if (context_w.charCodeAt(0) < 256) {
+                for (i = 0; i < context_numBits; i++) {
+                  context_data_val = (context_data_val << 1);
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                }
+                value = context_w.charCodeAt(0);
+                for (i = 0; i < 8; i++) {
+                  context_data_val = (context_data_val << 1) | (value & 1);
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value >>= 1;
+                }
+              } else {
+                value = 1;
+                for (i = 0; i < context_numBits; i++) {
+                  context_data_val = (context_data_val << 1) | value;
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value = 0;
+                }
+                value = context_w.charCodeAt(0);
+                for (i = 0; i < 16; i++) {
+                  context_data_val = (context_data_val << 1) | (value & 1);
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value >>= 1;
+                }
+              }
+              context_enlargeIn--;
+              if (context_enlargeIn === 0) {
+                context_enlargeIn = Math.pow(2, context_numBits);
+                context_numBits++;
+              }
+              delete context_dictionaryToCreate[context_w];
+            } else {
+              value = context_dictionary[context_w];
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value >>= 1;
+              }
+            }
+            context_enlargeIn--;
+            if (context_enlargeIn === 0) {
+              context_enlargeIn = Math.pow(2, context_numBits);
+              context_numBits++;
+            }
+            context_dictionary[context_wc] = context_dictSize++;
+            context_w = String(context_c);
+          }
+        }
+
+        if (context_w !== "") {
+          if (context_dictionaryToCreate[context_w] != null) {
+            if (context_w.charCodeAt(0) < 256) {
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = (context_data_val << 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+              }
+              value = context_w.charCodeAt(0);
+              for (i = 0; i < 8; i++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value >>= 1;
+              }
+            } else {
+              value = 1;
+              for (i = 0; i < context_numBits; i++) {
+                context_data_val = (context_data_val << 1) | value;
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = 0;
+              }
+              value = context_w.charCodeAt(0);
+              for (i = 0; i < 16; i++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value >>= 1;
+              }
+            }
+            context_enlargeIn--;
+            if (context_enlargeIn === 0) {
+              context_enlargeIn = Math.pow(2, context_numBits);
+              context_numBits++;
+            }
+            delete context_dictionaryToCreate[context_w];
+          } else {
+            value = context_dictionary[context_w];
+            for (i = 0; i < context_numBits; i++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position === bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value >>= 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn === 0) {
+            context_enlargeIn = Math.pow(2, context_numBits);
+            context_numBits++;
+          }
+        }
+
+        value = 2;
+        for (i = 0; i < context_numBits; i++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position === bitsPerChar - 1) {
+            context_data_position = 0;
+            context_data.push(getCharFromInt(context_data_val));
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+          value >>= 1;
+        }
+
+        while (true) {
+          context_data_val = (context_data_val << 1);
+          if (context_data_position === bitsPerChar - 1) {
+            context_data.push(getCharFromInt(context_data_val));
+            break;
+          } else context_data_position++;
+        }
+        return context_data.join("");
+      }
+
+      function _decompress(length, resetValue, getNextValue) {
+        const dictionary = [];
+        let next;
+        let enlargeIn = 4;
+        let dictSize = 4;
+        let numBits = 3;
+        let entry = "";
+        let result = [];
+        let i;
+        let w;
+        let bits, resb, maxpower, power;
+
+        const data = { val: getNextValue(0), position: resetValue, index: 1 };
+
+        for (i = 0; i < 3; i++) dictionary[i] = i;
+
+        bits = 0;
+        maxpower = Math.pow(2,2);
+        power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) {
+            data.position = resetValue;
+            data.val = getNextValue(data.index++);
+          }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+
+        switch (next = bits) {
+          case 0:
+            bits = 0;
+            maxpower = Math.pow(2,8);
+            power = 1;
+            while (power !== maxpower) {
+              resb = data.val & data.position;
+              data.position >>= 1;
+              if (data.position === 0) {
+                data.position = resetValue;
+                data.val = getNextValue(data.index++);
+              }
+              bits |= (resb > 0 ? 1 : 0) * power;
+              power <<= 1;
+            }
+            w = f(bits);
+            break;
+          case 1:
+            bits = 0;
+            maxpower = Math.pow(2,16);
+            power = 1;
+            while (power !== maxpower) {
+              resb = data.val & data.position;
+              data.position >>= 1;
+              if (data.position === 0) {
+                data.position = resetValue;
+                data.val = getNextValue(data.index++);
+              }
+              bits |= (resb > 0 ? 1 : 0) * power;
+              power <<= 1;
+            }
+            w = f(bits);
+            break;
+          case 2:
+            return "";
+        }
+
+        dictionary[3] = w;
+        result.push(w);
+
+        while (true) {
+          if (data.index > length) return "";
+
+          bits = 0;
+          maxpower = Math.pow(2,numBits);
+          power = 1;
+          while (power !== maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position === 0) {
+              data.position = resetValue;
+              data.val = getNextValue(data.index++);
+            }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+
+          switch (next = bits) {
+            case 0:
+              bits = 0;
+              maxpower = Math.pow(2,8);
+              power = 1;
+              while (power !== maxpower) {
+                resb = data.val & data.position;
+                data.position >>= 1;
+                if (data.position === 0) {
+                  data.position = resetValue;
+                  data.val = getNextValue(data.index++);
+                }
+                bits |= (resb > 0 ? 1 : 0) * power;
+                power <<= 1;
+              }
+              dictionary[dictSize++] = f(bits);
+              next = dictSize - 1;
+              enlargeIn--;
+              break;
+            case 1:
+              bits = 0;
+              maxpower = Math.pow(2,16);
+              power = 1;
+              while (power !== maxpower) {
+                resb = data.val & data.position;
+                data.position >>= 1;
+                if (data.position === 0) {
+                  data.position = resetValue;
+                  data.val = getNextValue(data.index++);
+                }
+                bits |= (resb > 0 ? 1 : 0) * power;
+                power <<= 1;
+              }
+              dictionary[dictSize++] = f(bits);
+              next = dictSize - 1;
+              enlargeIn--;
+              break;
+            case 2:
+              return result.join("");
+          }
+
+          if (enlargeIn === 0) {
+            enlargeIn = Math.pow(2, numBits);
+            numBits++;
+          }
+
+          if (dictionary[next]) {
+            entry = dictionary[next];
+          } else {
+            if (next === dictSize) entry = w + w.charAt(0);
+            else return null;
+          }
+          result.push(entry);
+
+          dictionary[dictSize++] = w + entry.charAt(0);
+          enlargeIn--;
+
+          w = entry;
+
+          if (enlargeIn === 0) {
+            enlargeIn = Math.pow(2, numBits);
+            numBits++;
+          }
+        }
+      }
+
+      return { compressToEncodedURIComponent, decompressFromEncodedURIComponent };
+    })();
+
+    const LANGS = [
+      { id: "auto", label: "Auto" },
+      { id: "plaintext", label: "Plaintext" },
+      { id: "javascript", label: "JavaScript" },
+      { id: "typescript", label: "TypeScript" },
+      { id: "json", label: "JSON" },
+      { id: "html", label: "HTML" },
+      { id: "xml", label: "XML" },
+      { id: "css", label: "CSS" },
+      { id: "markdown", label: "Markdown" },
+      { id: "python", label: "Python" },
+      { id: "bash", label: "Bash" },
+      { id: "sql", label: "SQL" },
+      { id: "yaml", label: "YAML" },
+      { id: "java", label: "Java" },
+      { id: "c", label: "C" },
+      { id: "cpp", label: "C++" },
+      { id: "go", label: "Go" },
+      { id: "rust", label: "Rust" },
+      { id: "php", label: "PHP" }
+    ];
+
+    const COMP_ALGOS = ["deflate", "gzip", "brotli"];
+
+    const METHOD_VARIANTS = {
+      u: ["u","U","V","p","P","Q"],
+      l: ["l","L","M","r","R","S"],
+      d: ["d","D","E","f","F","G"],
+      z: ["z","Z","Y","g","H","I"],
+      b: ["b","B","C","j","J","K"]
+    };
+
+    const METHOD_REVERSE = (function(){
+      const rev = new Map();
+      for (const base of Object.keys(METHOD_VARIANTS)) {
+        const arr = METHOD_VARIANTS[base];
+        for (let i = 0; i < arr.length; i++) {
+          const nl = i % 3;
+          const wrap = i >= 3;
+          rev.set(arr[i], { base, nl, wrap });
+        }
+      }
+      return rev;
+    })();
+
+    const $text = document.getElementById("text");
+    const $code = document.getElementById("code");
+    const $domainLink = document.getElementById("domainLink");
+    const $chars = document.getElementById("chars");
+    const $lines = document.getElementById("lines");
+    const $langSelect = document.getElementById("langSelect");
+    const $scroller = document.getElementById("scroller");
+    const $layer = document.getElementById("layer");
+    const $measure = document.getElementById("measure");
+    const $downloadBtn = document.getElementById("downloadBtn");
+
+    const baseLabelById = new Map(LANGS.map(l => [l.id, l.label]));
+    const dynamicLangs = new Set();
+
+    let isApplyingFromHash = false;
+    let saveTimer = null;
+
+    let autoEnabled = true;
+    let lockedLang = "plaintext";
+    let wrapEnabled = false;
+    let suppressLangChange = false;
+
+    let metrics = { charW: 8, lineH: 20, padL: 0, padT: 0 };
+    let currentShownLang = "plaintext";
+
+    function base36Char(n) { return n.toString(36); }
+    function base36ToInt(ch) {
+      const n = parseInt(ch, 36);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        "\"":"&quot;",
+        "'":"&#39;"
+      }[c]));
+    }
+
+    function u8ToB64Url(u8) {
+      let bin = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < u8.length; i += chunk) {
+        bin += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+      }
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function b64UrlToU8(b64url) {
+      const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64url.length + 3) % 4);
+      const bin = atob(b64);
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      return u8;
+    }
+
+    function supportsCompressionStream() {
+      try {
+        return typeof CompressionStream !== "undefined" && typeof DecompressionStream !== "undefined";
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function streamCompress(algo, text) {
+      const bytes = new TextEncoder().encode(text);
+      const cs = new CompressionStream(algo);
+      const writer = cs.writable.getWriter();
+      writer.write(bytes);
+      writer.close();
+      const buf = await new Response(cs.readable).arrayBuffer();
+      return u8ToB64Url(new Uint8Array(buf));
+    }
+
+    async function streamDecompress(algo, b64url) {
+      const bytes = b64UrlToU8(b64url);
+      const ds = new DecompressionStream(algo);
+      const writer = ds.writable.getWriter();
+      writer.write(bytes);
+      writer.close();
+      const buf = await new Response(ds.readable).arrayBuffer();
+      return new TextDecoder().decode(buf);
+    }
+
+    function hasLangOption(id) {
+      return baseLabelById.has(id) || dynamicLangs.has(id);
+    }
+
+    function ensureLangOption(id) {
+      if (!id || id === "auto") return;
+      if (hasLangOption(id)) return;
+      dynamicLangs.add(id);
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = id;
+      $langSelect.appendChild(opt);
+    }
+
+    function updateOptionLabels(selectedId) {
+      for (const opt of $langSelect.options) {
+        const id = opt.value;
+        const base = baseLabelById.get(id) || id;
+        const suffix = (autoEnabled && id === selectedId && id !== "auto") ? " (auto)" : "";
+        opt.textContent = base + suffix;
+      }
+    }
+
+    function getLangIndexById(id) {
+      const idx = LANGS.findIndex(l => l.id === id);
+      if (idx >= 0) return idx;
+      const p = LANGS.findIndex(l => l.id === "plaintext");
+      return p >= 0 ? p : 1;
+    }
+
+    function getLangIdByIndex(idx) {
+      return (LANGS[idx] && LANGS[idx].id) ? LANGS[idx].id : "auto";
+    }
+
+    function persistLangId() {
+      return autoEnabled ? "auto" : lockedLang;
+    }
+
+    function normalizeNewlinesLossless(text) {
+      const hasCRLF = /\r\n/.test(text);
+      const hasCR = /(^|[^\r])\r(?!\n)/.test(text);
+      if (!hasCRLF && !hasCR) return { norm: text, nl: 0 };
+      const norm = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      return { norm, nl: hasCRLF ? 1 : 2 };
+    }
+
+    function restoreNewlinesLossless(text, nl) {
+      if (nl === 1) return text.replace(/\n/g, "\r\n");
+      if (nl === 2) return text.replace(/\n/g, "\r");
+      return text;
+    }
+
+    function baseMethodTagForAlgo(algo) {
+      if (algo === "deflate") return "d";
+      if (algo === "gzip") return "z";
+      return "b";
+    }
+
+    async function encodeToHashPayload(text, langId) {
+      const { norm, nl } = normalizeNewlinesLossless(text);
+      const langIdx = getLangIndexById(langId);
+      const langChar = base36Char(langIdx);
+
+      const candidates = [];
+
+      try {
+        const raw = encodeURIComponent(norm);
+        candidates.push({ base: "u", d: raw });
+      } catch (e) {}
+
+      try {
+        const lz = LZString.compressToEncodedURIComponent(norm);
+        candidates.push({ base: "l", d: lz });
+      } catch (e) {}
+
+      if (supportsCompressionStream()) {
+        for (const algo of COMP_ALGOS) {
+          try {
+            const enc = await streamCompress(algo, norm);
+            candidates.push({ base: baseMethodTagForAlgo(algo), d: enc });
+          } catch (e) {}
+        }
+      }
+
+      let best = candidates[0] || { base: "u", d: "" };
+      for (const c of candidates) {
+        if (c.d.length < best.d.length) best = c;
+      }
+
+      const variantIndex = nl + (wrapEnabled ? 3 : 0);
+      const methodChar = (METHOD_VARIANTS[best.base] && METHOD_VARIANTS[best.base][variantIndex])
+        ? METHOD_VARIANTS[best.base][variantIndex]
+        : best.base;
+
+      return methodChar + langChar + best.d;
+    }
+
+    async function decodeFromHashPayload(payload) {
+      if (!payload) return { text: "", langId: "auto", wrap: false };
+
+      const methodChar = payload.charAt(0);
+      const langChar = payload.charAt(1);
+      const data = payload.slice(2);
+
+      const info = METHOD_REVERSE.get(methodChar) || { base: methodChar, nl: 0, wrap: false };
+      const base = info.base;
+      const nl = info.nl;
+      const wrap = !!info.wrap;
+
+      const langIdx = base36ToInt(langChar);
+      const langId = getLangIdByIndex(langIdx);
+
+      let norm = "";
+
+      if (base === "u") {
+        try { norm = decodeURIComponent(data); } catch (e) { norm = ""; }
+        return { text: restoreNewlinesLossless(norm, nl), langId, wrap };
+      }
+
+      if (base === "l") {
+        const t = LZString.decompressFromEncodedURIComponent(data);
+        norm = (t == null ? "" : t);
+        return { text: restoreNewlinesLossless(norm, nl), langId, wrap };
+      }
+
+      if (supportsCompressionStream()) {
+        if (base === "d") {
+          try { norm = await streamDecompress("deflate", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap }; } catch (e) {}
+        }
+        if (base === "z") {
+          try { norm = await streamDecompress("gzip", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap }; } catch (e) {}
+        }
+        if (base === "b") {
+          try { norm = await streamDecompress("brotli", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap }; } catch (e) {}
+        }
+      }
+
+      const fallback = LZString.decompressFromEncodedURIComponent(payload);
+      return { text: (fallback == null ? "" : fallback), langId: "auto", wrap: false };
+    }
+
+    function applyWrapState() {
+      document.body.classList.toggle("wrap", wrapEnabled);
+      $text.setAttribute("wrap", wrapEnabled ? "soft" : "off");
+    }
+
+    function updateTitleFromFirstLine(text) {
+      const firstLine = (text.split("\n")[0] || "").trim();
+      if (firstLine.startsWith("#")) {
+        const t = firstLine.replace(/^#+\s*/, "").trim();
+        document.title = t ? t : "TXT";
+      } else {
+        document.title = "TXT";
+      }
+    }
+
+    function updateStats(text) {
+      const lines = text.length ? (text.match(/\n/g)?.length || 0) + 1 : 1;
+      const chars = text.length - lines + 1;
+      $chars.textContent = "chars: " + chars;
+      $lines.textContent = "lines: " + lines;
+    }
+
+    function setDropdownValueSilently(value) {
+      suppressLangChange = true;
+      try { $langSelect.value = value; }
+      finally { suppressLangChange = false; }
+    }
+
+    function computeLayerSize(text) {
+      const oldLeft = $scroller.scrollLeft;
+      const oldTop = $scroller.scrollTop;
+
+      $measure.textContent = (text && text.endsWith("\n")) ? (text + " ") : (text + "\n");
+
+      if (wrapEnabled) {
+        $measure.style.width = $scroller.clientWidth + "px";
+        const w = $scroller.clientWidth;
+        const h = Math.max($scroller.clientHeight, $measure.scrollHeight);
+        $layer.style.width = w + "px";
+        $layer.style.height = h + "px";
+      } else {
+        $measure.style.width = "auto";
+        const w = Math.max($scroller.clientWidth, $measure.scrollWidth);
+        const h = Math.max($scroller.clientHeight, $measure.scrollHeight);
+        $layer.style.width = w + "px";
+        $layer.style.height = h + "px";
+      }
+
+      $scroller.scrollLeft = oldLeft;
+      $scroller.scrollTop = oldTop;
+    }
+
+    function shouldDowngradeDetection(text, detected, relevance) {
+      const t = text.trim();
+      if (t.length === 0) return true;
+      if (t.length < 12 && !/\n/.test(text)) return true;
+      if ((relevance || 0) < 6) return true;
+
+      if (detected === "bash" && !/[#$]|(\b(if|then|fi|for|do|done|echo|cd|export|set)\b)|(\|\|)|(&&)|(;)|(\$[A-Za-z_])/.test(text)) {
+        return true;
+      }
+      return false;
+    }
+
+    function normalizeDetected(detected, text) {
+      if (detected === "xml") {
+        if (/<!doctype\b|<html\b|<\/html>|<head\b|<body\b/i.test(text)) return "html";
+      }
+      return detected || "plaintext";
+    }
+
+    function renderPlain(text) {
+      $code.className = "hljs";
+      $code.innerHTML = escapeHtml(text);
+      return "plaintext";
+    }
+
+    function renderAuto(text) {
+      if (!window.hljs) return renderPlain(text);
+
+      const subset = Array.from(new Set(
+        LANGS.map(l => l.id).filter(id => id !== "auto" && id !== "plaintext")
+      ));
+
+      let res;
+      try {
+        res = hljs.highlightAuto(text, subset);
+      } catch (e) {
+        return renderPlain(text);
+      }
+
+      let detected = normalizeDetected(res.language || "plaintext", text);
+      const relevance = res.relevance || 0;
+
+      if (shouldDowngradeDetection(text, detected, relevance)) {
+        return renderPlain(text);
+      }
+
+      $code.className = "hljs" + (detected ? (" language-" + detected) : "");
+      $code.innerHTML = res.value || escapeHtml(text);
+      return detected;
+    }
+
+    function renderFixed(text, lang) {
+      if (!window.hljs) return renderPlain(text);
+      if (lang === "plaintext") return renderPlain(text);
+
+      try {
+        const res = hljs.highlight(text, { language: lang, ignoreIllegals: true });
+        $code.className = "hljs language-" + lang;
+        $code.innerHTML = res.value || escapeHtml(text);
+        return lang;
+      } catch (e) {
+        return renderPlain(text);
+      }
+    }
+
+    function recomputeMetrics() {
+      const cs = getComputedStyle($text);
+      const padL = parseFloat(cs.paddingLeft) || 0;
+      const padT = parseFloat(cs.paddingTop) || 0;
+
+      let lineH = parseFloat(cs.lineHeight);
+      if (!Number.isFinite(lineH)) lineH = 20;
+
+      const probe = document.createElement("span");
+      probe.style.position = "absolute";
+      probe.style.left = "-99999px";
+      probe.style.top = "-99999px";
+      probe.style.fontFamily = cs.fontFamily;
+      probe.style.fontSize = cs.fontSize;
+      probe.style.lineHeight = cs.lineHeight;
+      probe.style.whiteSpace = "pre";
+      probe.textContent = "MMMMMMMMMM";
+      document.body.appendChild(probe);
+      const w = probe.getBoundingClientRect().width / 10;
+      document.body.removeChild(probe);
+
+      metrics = {
+        charW: Math.max(6, w || 8),
+        lineH: Math.max(14, lineH),
+        padL,
+        padT
+      };
+    }
+
+    function caretXY() {
+      const idx = $text.selectionStart || 0;
+      const before = $text.value.slice(0, idx);
+
+      const line = (before.match(/\n/g) || []).length;
+      const lastNl = before.lastIndexOf("\n");
+      const colText = before.slice(lastNl + 1);
+
+      const tabSize = 2;
+      let col = 0;
+      for (let i = 0; i < colText.length; i++) {
+        const ch = colText.charAt(i);
+        if (ch === "\t") col += (tabSize - (col % tabSize));
+        else col += 1;
+      }
+
+      const x = metrics.padL + col * metrics.charW;
+      const y = metrics.padT + line * metrics.lineH;
+      return { x, y };
+    }
+
+    function ensureCaretVisible() {
+      if (wrapEnabled) return;
+
+      const { x, y } = caretXY();
+      const margin = 48;
+
+      const left = $scroller.scrollLeft;
+      const top = $scroller.scrollTop;
+      const right = left + $scroller.clientWidth;
+      const bottom = top + $scroller.clientHeight;
+
+      let newLeft = left;
+      let newTop = top;
+
+      if (x < left + margin) newLeft = Math.max(0, x - margin);
+      else if (x > right - margin) newLeft = Math.max(0, x - ($scroller.clientWidth - margin));
+
+      if (y < top + margin) newTop = Math.max(0, y - margin);
+      else if (y > bottom - margin) newTop = Math.max(0, y - ($scroller.clientHeight - margin));
+
+      if (newLeft !== left || newTop !== top) {
+        $scroller.scrollLeft = newLeft;
+        $scroller.scrollTop = newTop;
+      }
+    }
+
+    function forceScrollTopLeft() {
+      $scroller.scrollTop = 0;
+      $scroller.scrollLeft = 0;
+    }
+
+    function langToDownloadMeta(langId) {
+      const map = {
+        plaintext: { ext: "txt", mime: "text/plain;charset=utf-8" },
+        javascript: { ext: "js", mime: "text/javascript;charset=utf-8" },
+        typescript: { ext: "ts", mime: "text/typescript;charset=utf-8" },
+        json: { ext: "json", mime: "application/json;charset=utf-8" },
+        html: { ext: "html", mime: "text/html;charset=utf-8" },
+        xml: { ext: "xml", mime: "application/xml;charset=utf-8" },
+        css: { ext: "css", mime: "text/css;charset=utf-8" },
+        markdown: { ext: "md", mime: "text/markdown;charset=utf-8" },
+        python: { ext: "py", mime: "text/x-python;charset=utf-8" },
+        bash: { ext: "sh", mime: "text/x-shellscript;charset=utf-8" },
+        sql: { ext: "sql", mime: "application/sql;charset=utf-8" },
+        yaml: { ext: "yaml", mime: "application/x-yaml;charset=utf-8" },
+        java: { ext: "java", mime: "text/x-java-source;charset=utf-8" },
+        c: { ext: "c", mime: "text/x-c;charset=utf-8" },
+        cpp: { ext: "cpp", mime: "text/x-c++src;charset=utf-8" },
+        go: { ext: "go", mime: "text/x-go;charset=utf-8" },
+        rust: { ext: "rs", mime: "text/rust;charset=utf-8" },
+        php: { ext: "php", mime: "application/x-httpd-php;charset=utf-8" }
+      };
+
+      return map[langId] || map.plaintext;
+    }
+
+    function downloadCurrentText() {
+      const text = $text.value || "";
+
+      const effectiveLang = autoEnabled ? (currentShownLang || "plaintext") : (lockedLang || "plaintext");
+      const meta = langToDownloadMeta(effectiveLang);
+
+      const title = document.title;
+      const base = location.hostname ? location.hostname : "local";
+      const now = new Date();
+      const pad2 = (n) => String(n).padStart(2, "0");
+      const date =
+      String(now.getFullYear()) +
+      pad2(now.getMonth() + 1) +
+      pad2(now.getDate()) +
+      "_" +
+      pad2(now.getHours()) +
+      pad2(now.getMinutes()) +
+      pad2(now.getSeconds());
+      const filename = base + "-" + date + "." + meta.ext;
+
+      const blob = new Blob([text], { type: meta.mime });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 250);
+    }
+
+    function render() {
+      const text = $text.value;
+
+      applyWrapState();
+      updateTitleFromFirstLine(text);
+      updateStats(text);
+      computeLayerSize(text);
+
+      let shown;
+      if (autoEnabled) {
+        shown = renderAuto(text);
+        ensureLangOption(shown);
+        if (hasLangOption(shown)) setDropdownValueSilently(shown);
+        else setDropdownValueSilently("plaintext");
+      } else {
+        shown = renderFixed(text, lockedLang);
+        ensureLangOption(shown);
+        if (hasLangOption(lockedLang)) setDropdownValueSilently(lockedLang);
+        else setDropdownValueSilently("plaintext");
+      }
+
+      currentShownLang = shown || "plaintext";
+
+      updateOptionLabels($langSelect.value);
+
+      requestAnimationFrame(() => {
+        recomputeMetrics();
+        ensureCaretVisible();
+      });
+    }
+
+    async function saveToUrlDebounced() {
+      if (isApplyingFromHash) return;
+      if (saveTimer) clearTimeout(saveTimer);
+
+      saveTimer = setTimeout(async () => {
+        const text = $text.value;
+        const langId = persistLangId();
+        const payload = await encodeToHashPayload(text, langId);
+        const newHash = "#" + payload;
+        if (location.hash !== newHash) history.replaceState(null, "", newHash);
+      }, 250);
+    }
+
+    async function applyFromUrlHash() {
+      const hash = (location.hash || "").replace(/^#/, "");
+      const { text, langId, wrap } = await decodeFromHashPayload(hash);
+
+      isApplyingFromHash = true;
+      try {
+        $text.value = text || "";
+        wrapEnabled = !!wrap;
+
+        try { $text.setSelectionRange(0, 0); } catch (e) {}
+
+        if (langId === "auto") {
+          autoEnabled = true;
+          lockedLang = "plaintext";
+        } else {
+          autoEnabled = false;
+          lockedLang = langId;
+          ensureLangOption(lockedLang);
+        }
+
+        render();
+
+        requestAnimationFrame(() => {
+          forceScrollTopLeft();
+          try { $text.setSelectionRange(0, 0); } catch (e) {}
+        });
+      } finally {
+        isApplyingFromHash = false;
+      }
+    }
+
+    function toggleWrap() {
+      wrapEnabled = !wrapEnabled;
+      forceScrollTopLeft();
+      try { $text.setSelectionRange(0, 0); } catch (e) {}
+      render();
+      saveToUrlDebounced();
+    }
+
+    function init() {
+      const host = location.hostname ? location.hostname : "local";
+      const baseUrl = location.origin + location.pathname;
+
+      $domainLink.textContent = host;
+      $domainLink.href = baseUrl;
+
+      for (const l of LANGS) {
+        const opt = document.createElement("option");
+        opt.value = l.id;
+        opt.textContent = l.label;
+        $langSelect.appendChild(opt);
+      }
+
+      recomputeMetrics();
+
+      $text.addEventListener("input", () => {
+        render();
+        saveToUrlDebounced();
+      });
+
+      $text.addEventListener("keydown", () => requestAnimationFrame(ensureCaretVisible));
+      $text.addEventListener("keyup", () => requestAnimationFrame(ensureCaretVisible));
+      $text.addEventListener("click", () => requestAnimationFrame(ensureCaretVisible));
+      $text.addEventListener("select", () => requestAnimationFrame(ensureCaretVisible));
+
+      $lines.addEventListener("click", toggleWrap);
+
+      $langSelect.addEventListener("change", () => {
+        if (suppressLangChange) return;
+
+        const v = $langSelect.value;
+        if (v === "auto") {
+          autoEnabled = true;
+          lockedLang = "plaintext";
+        } else {
+          autoEnabled = false;
+          lockedLang = v;
+        }
+
+        render();
+        saveToUrlDebounced();
+        $text.focus();
+      });
+
+      $downloadBtn.addEventListener("click", () => {
+        downloadCurrentText();
+        $text.focus();
+      });
+
+      window.addEventListener("resize", () => {
+        recomputeMetrics();
+        render();
+      });
+
+      window.addEventListener("hashchange", () => {
+        applyFromUrlHash();
+      });
+
+      applyFromUrlHash().then(() => {
+        forceScrollTopLeft();
+        if (!$text.value) $text.focus();
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
