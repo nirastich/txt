@@ -8,6 +8,7 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 
   <style>
     :root{
@@ -126,8 +127,8 @@
       color:#fff;
     }
 
-    #downloadBtn{
-      margin-left:10px;
+    .topBtn{
+      margin-left:6px;
       width:30px;
       height:30px;
       display:inline-flex;
@@ -142,24 +143,34 @@
       flex:0 0 auto;
     }
 
-    #downloadBtn:hover{
+    .topBtn:hover{
       background:rgba(255,255,255,.06);
       color:rgba(255,255,255,.86);
     }
 
-    #downloadBtn:active{
+    .topBtn:active{
       background:rgba(255,255,255,.10);
     }
 
-    #downloadBtn:focus-visible{
+    .topBtn:focus-visible{
       border-color:rgba(255,255,255,.30);
       box-shadow: 0 0 0 3px rgba(255,255,255,.10);
     }
 
-    #downloadBtn svg{
+    .topBtn svg{
       width:16px;
       height:16px;
       display:block;
+    }
+
+    .topBtn.active{
+      background:rgba(255,255,255,.12);
+      color:#fff;
+      border-color:rgba(255,255,255,.25);
+    }
+
+    .topBtn.hidden{
+      display:none;
     }
 
     #editorWrap{
@@ -256,6 +267,184 @@
       overflow-wrap:anywhere;
       word-break:break-word;
     }
+
+    /* ── Markdown Preview ── */
+
+    #mdPreview{
+      position:absolute;
+      inset:0;
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      padding:32px clamp(18px, 5vw, 64px) 64px;
+      display:none;
+      background:var(--bg);
+    }
+
+    body.md-preview #mdPreview{ display:block; }
+    body.md-preview #scroller{ display:none; }
+
+    #mdPreview .md-body{
+      max-width:760px;
+      margin:0 auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size:15px;
+      line-height:1.7;
+      color:rgba(255,255,255,.88);
+      word-wrap:break-word;
+    }
+
+    /* Headings */
+    #mdPreview .md-body h1,
+    #mdPreview .md-body h2,
+    #mdPreview .md-body h3,
+    #mdPreview .md-body h4,
+    #mdPreview .md-body h5,
+    #mdPreview .md-body h6{
+      color:#fff;
+      font-weight:600;
+      line-height:1.3;
+      margin:1.6em 0 .6em;
+    }
+    #mdPreview .md-body h1:first-child,
+    #mdPreview .md-body h2:first-child,
+    #mdPreview .md-body h3:first-child{
+      margin-top:0;
+    }
+    #mdPreview .md-body h1{ font-size:1.9em; letter-spacing:-.02em; }
+    #mdPreview .md-body h2{
+      font-size:1.45em;
+      padding-bottom:.35em;
+      border-bottom:1px solid var(--border);
+    }
+    #mdPreview .md-body h3{ font-size:1.2em; }
+    #mdPreview .md-body h4{ font-size:1.05em; }
+
+    /* Paragraphs & basics */
+    #mdPreview .md-body p{ margin:0 0 1em; }
+    #mdPreview .md-body strong{ color:#fff; font-weight:600; }
+    #mdPreview .md-body em{ font-style:italic; }
+
+    /* Links */
+    #mdPreview .md-body a{
+      color:rgba(130,170,255,.9);
+      text-decoration:none;
+    }
+    #mdPreview .md-body a:hover{
+      text-decoration:underline;
+      text-underline-offset:2px;
+    }
+
+    /* Lists */
+    #mdPreview .md-body ul,
+    #mdPreview .md-body ol{
+      margin:0 0 1em;
+      padding-left:1.8em;
+    }
+    #mdPreview .md-body li{ margin:.25em 0; }
+    #mdPreview .md-body li > p{ margin:0; }
+
+    /* Task lists */
+    #mdPreview .md-body input[type="checkbox"]{
+      margin-right:.4em;
+      accent-color:rgba(130,170,255,.9);
+    }
+
+    /* Blockquotes */
+    #mdPreview .md-body blockquote{
+      margin:0 0 1em;
+      padding:.6em 1em;
+      border-left:3px solid rgba(255,255,255,.2);
+      color:rgba(255,255,255,.6);
+      background:rgba(255,255,255,.03);
+      border-radius:0 6px 6px 0;
+    }
+    #mdPreview .md-body blockquote p:last-child{ margin-bottom:0; }
+
+    /* Code inline */
+    #mdPreview .md-body code{
+      font-family:var(--mono);
+      font-size:.88em;
+      padding:.15em .4em;
+      background:rgba(255,255,255,.08);
+      border-radius:4px;
+      color:rgba(255,255,255,.82);
+    }
+
+    /* Code blocks */
+    #mdPreview .md-body pre{
+      margin:0 0 1em;
+      padding:14px 16px;
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--border);
+      border-radius:8px;
+      overflow-x:auto;
+      line-height:1.5;
+    }
+    #mdPreview .md-body pre code{
+      padding:0;
+      background:none;
+      border-radius:0;
+      font-size:.85em;
+      color:rgba(255,255,255,.82);
+    }
+
+    /* Tables */
+    #mdPreview .md-body table{
+      width:100%;
+      border-collapse:collapse;
+      margin:0 0 1em;
+      font-size:.92em;
+    }
+    #mdPreview .md-body th,
+    #mdPreview .md-body td{
+      padding:8px 12px;
+      border:1px solid rgba(255,255,255,.1);
+      text-align:left;
+    }
+    #mdPreview .md-body th{
+      font-weight:600;
+      color:#fff;
+      background:rgba(255,255,255,.05);
+    }
+    #mdPreview .md-body tr:nth-child(even){
+      background:rgba(255,255,255,.02);
+    }
+    
+    #mdPreview .md-body td[align="center"],
+    #mdPreview .md-body th[align="center"]{ text-align:center; }
+    #mdPreview .md-body td[align="right"],
+    #mdPreview .md-body th[align="right"]{ text-align:right; }
+
+    /* Horizontal rule */
+    #mdPreview .md-body hr{
+      border:none;
+      border-top:1px solid rgba(255,255,255,.12);
+      margin:2em 0;
+    }
+
+    /* Images */
+    #mdPreview .md-body img{
+      max-width:100%;
+      height:auto;
+      border-radius:6px;
+      margin:.5em 0;
+    }
+
+    /* Details */
+    #mdPreview .md-body details{
+      margin:0 0 1em;
+      padding:.5em 1em;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      border-radius:6px;
+    }
+    #mdPreview .md-body summary{
+      cursor:pointer;
+      font-weight:600;
+      color:#fff;
+    }
+
+    #mdPreview .md-body sup a{ font-size:.8em; }
   </style>
 </head>
 
@@ -273,17 +462,20 @@
     <div id="rightBar">
       <select id="langSelect" title="Language"></select>
 
-      <button id="downloadBtn" type="button" title="Download">
-        <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
-          width="1024.000000pt" height="1280.000000pt" viewBox="0 0 1024.000000 1280.000000"
-          preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
-          <g transform="translate(0.000000,1280.000000) scale(0.100000,-0.100000)"
-            fill="currentColor" stroke="none">
-            <path d="M3230 9905 l0 -2895 -1136 -2 -1135 -3 1072 -1330 c589 -731 1524
--1891 2077 -2577 553 -687 1008 -1248 1012 -1248 6 0 511 625 3363 4165 l798
-990 -1136 3 -1135 2 0 2895 0 2895 -1890 0 -1890 0 0 -2895z"/>
-            <path d="M0 810 l0 -810 5120 0 5120 0 0 810 0 810 -5120 0 -5120 0 0 -810z"/>
-          </g>
+      <button id="mdToggleBtn" class="topBtn hidden" type="button" title="Toggle Markdown preview">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+
+      <button id="downloadBtn" class="topBtn" type="button" title="Download">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
       </button>
     </div>
@@ -296,6 +488,7 @@
         <textarea id="text" wrap="off" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
       </div>
     </div>
+    <div id="mdPreview"><div class="md-body" id="mdBody"></div></div>
     <pre id="measure" aria-hidden="true"></pre>
   </div>
 
@@ -743,6 +936,8 @@
     const $layer = document.getElementById("layer");
     const $measure = document.getElementById("measure");
     const $downloadBtn = document.getElementById("downloadBtn");
+    const $mdToggleBtn = document.getElementById("mdToggleBtn");
+    const $mdBody = document.getElementById("mdBody");
 
     const baseLabelById = new Map(LANGS.map(l => [l.id, l.label]));
     const dynamicLangs = new Set();
@@ -754,9 +949,20 @@
     let lockedLang = "plaintext";
     let wrapEnabled = false;
     let suppressLangChange = false;
+    let mdPreviewActive = false;
 
     let metrics = { charW: 8, lineH: 20, padL: 0, padT: 0 };
     let currentShownLang = "plaintext";
+    const DL_ICON_DEFAULT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2h4v8h4l-6 8-6-8h4z"/><rect x="3" y="21" width="18" height="2" rx=".5"/></svg>';
+    const DL_ICON_HTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2h4v8h4l-6 8-6-8h4z"/><rect x="3" y="21" width="18" height="2" rx=".5"/><path d="M5 3L1.5 10 5 17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M19 3L22.5 10 19 17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>';
+
+    /* ── Marked config ── */
+    if (window.marked) {
+      marked.setOptions({
+        breaks: true,
+        gfm: true
+      });
+    }
 
     function base36Char(n) { return n.toString(36); }
     function base36ToInt(ch) {
@@ -1174,27 +1380,32 @@
       return map[langId] || map.plaintext;
     }
 
+    function getFileBase() {
+      const title = document.title;
+      return (title && title !== "TXT")
+        ? title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "").replace(/\s+/g, "_").slice(0, 80)
+        : (location.hostname || "local");
+    }
+
+    function getDateStamp() {
+      const now = new Date();
+      const pad2 = (n) => String(n).padStart(2, "0");
+      return String(now.getFullYear()) +
+        pad2(now.getMonth() + 1) +
+        pad2(now.getDate()) +
+        "_" +
+        pad2(now.getHours()) +
+        pad2(now.getMinutes()) +
+        pad2(now.getSeconds());
+    }
+
     function downloadCurrentText() {
       const text = $text.value || "";
 
       const effectiveLang = autoEnabled ? (currentShownLang || "plaintext") : (lockedLang || "plaintext");
       const meta = langToDownloadMeta(effectiveLang);
 
-      const title = document.title;
-      const base = (title && title !== "TXT")
-        ? title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "").replace(/\s+/g, "_").slice(0, 80)
-        : (location.hostname || "local");
-      const now = new Date();
-      const pad2 = (n) => String(n).padStart(2, "0");
-      const date =
-      String(now.getFullYear()) +
-      pad2(now.getMonth() + 1) +
-      pad2(now.getDate()) +
-      "_" +
-      pad2(now.getHours()) +
-      pad2(now.getMinutes()) +
-      pad2(now.getSeconds());
-      const filename = base + "-" + date + "." + meta.ext;
+      const filename = getFileBase() + "-" + getDateStamp() + "." + meta.ext;
 
       const blob = new Blob([text], { type: meta.mime });
       const url = URL.createObjectURL(blob);
@@ -1207,6 +1418,138 @@
       a.remove();
 
       setTimeout(() => URL.revokeObjectURL(url), 250);
+    }
+
+    function buildHtmlDocument(mdText) {
+      const bodyHtml = marked.parse(prepareMdText(mdText));
+      const title = document.title !== "TXT" ? escapeHtml(document.title) : "Document";
+
+      return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<style>
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  padding:40px 24px 80px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.7;
+  color:#1a1a1a;
+  background:#fff;
+}
+.content{max-width:760px;margin:0 auto}
+h1,h2,h3,h4,h5,h6{font-weight:600;line-height:1.3;margin:1.6em 0 .6em;color:#111}
+h1:first-child,h2:first-child,h3:first-child{margin-top:0}
+h1{font-size:2em;letter-spacing:-.02em}
+h2{font-size:1.5em;padding-bottom:.35em;border-bottom:1px solid #e5e5e5}
+h3{font-size:1.25em}
+p{margin:0 0 1em}
+a{color:#0969da;text-decoration:none}
+a:hover{text-decoration:underline}
+ul,ol{margin:0 0 1em;padding-left:1.8em}
+li{margin:.25em 0}
+blockquote{margin:0 0 1em;padding:.6em 1em;border-left:3px solid #d0d7de;color:#57606a;background:#f6f8fa;border-radius:0 6px 6px 0}
+blockquote p:last-child{margin-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:.88em;padding:.15em .4em;background:#f0f0f0;border-radius:4px}
+pre{margin:0 0 1em;padding:14px 16px;background:#f6f8fa;border:1px solid #e5e5e5;border-radius:8px;overflow-x:auto;line-height:1.5}
+pre code{padding:0;background:none;font-size:.85em}
+table{width:100%;border-collapse:collapse;margin:0 0 1em;font-size:.92em}
+th,td{padding:8px 12px;border:1px solid #e5e5e5;text-align:left}
+th{font-weight:600;background:#f6f8fa}
+td[align="center"],th[align="center"]{text-align:center}
+td[align="right"],th[align="right"]{text-align:right}
+tr:nth-child(even){background:#fafafa}
+hr{border:none;border-top:1px solid #e5e5e5;margin:2em 0}
+img{max-width:100%;height:auto;border-radius:6px;margin:.5em 0}
+input[type="checkbox"]{margin-right:.4em}
+</style>
+</head>
+<body>
+<div class="content">
+${bodyHtml}
+</div>
+</body>
+</html>`;
+    }
+
+    function downloadAsHtml() {
+      const text = $text.value || "";
+      if (!window.marked) return;
+
+      const html = buildHtmlDocument(text);
+      const filename = getFileBase() + "-" + getDateStamp() + ".html";
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 250);
+    }
+
+    /* ── Markdown-specific UI ── */
+    
+    function prepareMdText(text) {
+      return (text || "")
+        .replace(/\r\n?/g, "\n")
+        .replace(/^(`{3,}.*?)[ \t]+$/gm, '$1')
+        .replace(/^(~{3,}.*?)[ \t]+$/gm, '$1');
+    }
+
+    function isMarkdownActive() {
+      const eLang = autoEnabled ? currentShownLang : lockedLang;
+      return eLang === "markdown";
+    }
+
+    function updateMdButtons() {
+      const isMd = isMarkdownActive();
+      $mdToggleBtn.classList.toggle("hidden", !isMd);
+      $mdToggleBtn.classList.toggle("active", mdPreviewActive && isMd);
+
+      const htmlMode = isMd && mdPreviewActive;
+      $downloadBtn.innerHTML = htmlMode ? DL_ICON_HTML : DL_ICON_DEFAULT;
+      $downloadBtn.title = htmlMode ? "Download as HTML" : "Download";
+
+      if (!isMd && mdPreviewActive) {
+        mdPreviewActive = false;
+        document.body.classList.remove("md-preview");
+      }
+    }
+
+    function updateMdPreview() {
+      if (!mdPreviewActive || !window.marked) return;
+      const text = ($text.value || "").replace(/\r\n?/g, "\n");
+      $mdBody.innerHTML = marked.parse(prepareMdText($text.value));
+
+      if (window.hljs) {
+        $mdBody.querySelectorAll("pre code").forEach(block => {
+          hljs.highlightElement(block);
+        });
+      }
+    }
+
+    function toggleMdPreview() {
+      mdPreviewActive = !mdPreviewActive;
+      document.body.classList.toggle("md-preview", mdPreviewActive);
+      $mdToggleBtn.classList.toggle("active", mdPreviewActive);
+
+      $downloadBtn.innerHTML = mdPreviewActive ? DL_ICON_HTML : DL_ICON_DEFAULT;
+      $downloadBtn.title = mdPreviewActive ? "Download as HTML" : "Download";
+
+      if (mdPreviewActive) {
+        updateMdPreview();
+      } else {
+        $text.focus();
+      }
     }
 
     function render() {
@@ -1233,6 +1576,7 @@
       currentShownLang = shown || "plaintext";
 
       updateOptionLabels($langSelect.value);
+      updateMdButtons();
 
       requestAnimationFrame(() => {
         recomputeMetrics();
@@ -1338,9 +1682,15 @@
       });
 
       $downloadBtn.addEventListener("click", () => {
-        downloadCurrentText();
+        if (mdPreviewActive && isMarkdownActive()) {
+          downloadAsHtml();
+        } else {
+          downloadCurrentText();
+        }
         $text.focus();
       });
+
+      $mdToggleBtn.addEventListener("click", toggleMdPreview);
 
       window.addEventListener("resize", () => {
         recomputeMetrics();
