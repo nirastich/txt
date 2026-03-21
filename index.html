@@ -894,15 +894,6 @@
         candidates.push({ base: "l", d: lz });
       } catch (e) {}
 
-      if (supportsCompressionStream()) {
-        for (const algo of COMP_ALGOS) {
-          try {
-            const enc = await streamCompress(algo, norm);
-            candidates.push({ base: baseMethodTagForAlgo(algo), d: enc });
-          } catch (e) {}
-        }
-      }
-
       let best = candidates[0] || { base: "u", d: "" };
       for (const c of candidates) {
         if (c.d.length < best.d.length) best = c;
@@ -1190,7 +1181,9 @@
       const meta = langToDownloadMeta(effectiveLang);
 
       const title = document.title;
-      const base = location.hostname ? location.hostname : "local";
+      const base = (title && title !== "TXT")
+        ? title.replace(/[<>:"/\\|?*\x00-\x1f]/g, "").replace(/\s+/g, "_").slice(0, 80)
+        : (location.hostname || "local");
       const now = new Date();
       const pad2 = (n) => String(n).padStart(2, "0");
       const date =
