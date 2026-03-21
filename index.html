@@ -37,12 +37,13 @@
     #topbar{
       position:fixed;
       inset:0 0 auto 0;
-      height:var(--topbar-h);
+      min-height:var(--topbar-h);
       display:flex;
+      flex-wrap:wrap;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-      padding:0 var(--pad-x);
+      gap:4px 10px;
+      padding:4px var(--pad-x);
       background:rgba(0,0,0,.96);
       border-bottom:1px solid var(--border);
       font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -50,7 +51,29 @@
       user-select:none;
       white-space:nowrap;
       overflow:hidden;
+      transition: transform .25s ease;
     }
+
+    body.previewing #topbar{
+      transform:translateY(-100%);
+    }
+    body.previewing.topbar-visible #topbar{
+      transform:translateY(0);
+    }
+
+    body.previewing #editorWrap{
+      top:0;
+    }
+
+    #previewHitzone{
+      display:none;
+      position:fixed;
+      inset:0 0 auto 0;
+      height:18px;
+      z-index:4;
+    }
+    body.previewing #previewHitzone{ display:block; }
+    body.previewing.topbar-visible #previewHitzone{ height:auto; }
 
     #leftBar, #midBar, #rightBar{
       display:flex;
@@ -82,6 +105,19 @@
       color:var(--muted);
       overflow:hidden;
       text-overflow:ellipsis;
+    }
+
+    #rightBar{
+      flex:0 0 auto;
+      gap:6px;
+    }
+
+    @media (max-width: 480px){
+      #midBar{
+        order:3;
+        flex:1 0 100%;
+        justify-content:flex-start;
+      }
     }
 
     #lines{
@@ -127,7 +163,6 @@
     }
 
     #downloadBtn{
-      margin-left:10px;
       width:30px;
       height:30px;
       display:inline-flex;
@@ -161,6 +196,51 @@
       height:16px;
       display:block;
     }
+
+    #previewBtn{
+      height:30px;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:0 10px;
+      background:#000;
+      color:var(--muted);
+      border:1px solid var(--border);
+      border-radius:8px;
+      cursor:pointer;
+      outline:none;
+      flex:0 0 auto;
+      font:inherit;
+      white-space:nowrap;
+    }
+
+    #previewBtn:hover{
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.86);
+    }
+
+    #previewBtn:active{
+      background:rgba(255,255,255,.10);
+    }
+
+    #previewBtn:focus-visible{
+      border-color:rgba(255,255,255,.30);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.10);
+    }
+
+    #previewFrame{
+      display:none;
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      border:0;
+      background:#fff;
+      z-index:3;
+    }
+
+    body.previewing #previewFrame{ display:block; }
+    body.previewing #scroller{ visibility:hidden; }
 
     #editorWrap{
       position:fixed;
@@ -271,6 +351,8 @@
     </div>
 
     <div id="rightBar">
+      <button id="previewBtn" type="button" title="Preview HTML">Preview</button>
+
       <select id="langSelect" title="Language"></select>
 
       <button id="downloadBtn" type="button" title="Download">
@@ -289,6 +371,8 @@
     </div>
   </div>
 
+  <div id="previewHitzone"></div>
+
   <div id="editorWrap">
     <div id="scroller">
       <div id="layer">
@@ -296,6 +380,7 @@
         <textarea id="text" wrap="off" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
       </div>
     </div>
+    <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin" title="HTML Preview"></iframe>
     <pre id="measure" aria-hidden="true"></pre>
   </div>
 
@@ -712,12 +797,17 @@
 
     const COMP_ALGOS = ["deflate", "gzip", "brotli"];
 
+    /* ── variant encoding ──────────────────────────────────────────
+       index = nl + (wrap ? 3 : 0) + (preview ? 6 : 0)
+       nl ∈ {0,1,2}   wrap ∈ {0,1}   preview ∈ {0,1}   → 0‑11
+       Indices 0‑5 are identical to the original scheme (backward‑compatible).
+       Indices 6‑11 encode the same nl/wrap combos with preview=on.        */
     const METHOD_VARIANTS = {
-      u: ["u","U","V","p","P","Q"],
-      l: ["l","L","M","r","R","S"],
-      d: ["d","D","E","f","F","G"],
-      z: ["z","Z","Y","g","H","I"],
-      b: ["b","B","C","j","J","K"]
+      u: ["u","U","V","p","P","Q",  "a","A","W","h","N","O"],
+      l: ["l","L","M","r","R","S",  "m","n","o","q","s","t"],
+      d: ["d","D","E","f","F","G",  "v","w","x","y","T","X"],
+      z: ["z","Z","Y","g","H","I",  "0","1","2","3","4","5"],
+      b: ["b","B","C","j","J","K",  "6","7","8","9","c","e"]
     };
 
     const METHOD_REVERSE = (function(){
@@ -725,9 +815,10 @@
       for (const base of Object.keys(METHOD_VARIANTS)) {
         const arr = METHOD_VARIANTS[base];
         for (let i = 0; i < arr.length; i++) {
-          const nl = i % 3;
-          const wrap = i >= 3;
-          rev.set(arr[i], { base, nl, wrap });
+          const nl      = i % 3;
+          const wrap    = (i % 6) >= 3;
+          const preview = i >= 6;
+          rev.set(arr[i], { base, nl, wrap, preview });
         }
       }
       return rev;
@@ -743,6 +834,9 @@
     const $layer = document.getElementById("layer");
     const $measure = document.getElementById("measure");
     const $downloadBtn = document.getElementById("downloadBtn");
+    const $previewBtn = document.getElementById("previewBtn");
+    const $previewFrame = document.getElementById("previewFrame");
+    const $previewHitzone = document.getElementById("previewHitzone");
 
     const baseLabelById = new Map(LANGS.map(l => [l.id, l.label]));
     const dynamicLangs = new Set();
@@ -753,6 +847,7 @@
     let autoEnabled = true;
     let lockedLang = "plaintext";
     let wrapEnabled = false;
+    let previewEnabled = false;
     let suppressLangChange = false;
 
     let metrics = { charW: 8, lineH: 20, padL: 0, padT: 0 };
@@ -908,7 +1003,7 @@
         if (c.d.length < best.d.length) best = c;
       }
 
-      const variantIndex = nl + (wrapEnabled ? 3 : 0);
+      const variantIndex = nl + (wrapEnabled ? 3 : 0) + (previewEnabled ? 6 : 0);
       const methodChar = (METHOD_VARIANTS[best.base] && METHOD_VARIANTS[best.base][variantIndex])
         ? METHOD_VARIANTS[best.base][variantIndex]
         : best.base;
@@ -917,16 +1012,17 @@
     }
 
     async function decodeFromHashPayload(payload) {
-      if (!payload) return { text: "", langId: "auto", wrap: false };
+      if (!payload) return { text: "", langId: "auto", wrap: false, preview: false };
 
       const methodChar = payload.charAt(0);
       const langChar = payload.charAt(1);
       const data = payload.slice(2);
 
-      const info = METHOD_REVERSE.get(methodChar) || { base: methodChar, nl: 0, wrap: false };
+      const info = METHOD_REVERSE.get(methodChar) || { base: methodChar, nl: 0, wrap: false, preview: false };
       const base = info.base;
       const nl = info.nl;
       const wrap = !!info.wrap;
+      const preview = !!info.preview;
 
       const langIdx = base36ToInt(langChar);
       const langId = getLangIdByIndex(langIdx);
@@ -935,29 +1031,29 @@
 
       if (base === "u") {
         try { norm = decodeURIComponent(data); } catch (e) { norm = ""; }
-        return { text: restoreNewlinesLossless(norm, nl), langId, wrap };
+        return { text: restoreNewlinesLossless(norm, nl), langId, wrap, preview };
       }
 
       if (base === "l") {
         const t = LZString.decompressFromEncodedURIComponent(data);
         norm = (t == null ? "" : t);
-        return { text: restoreNewlinesLossless(norm, nl), langId, wrap };
+        return { text: restoreNewlinesLossless(norm, nl), langId, wrap, preview };
       }
 
       if (supportsCompressionStream()) {
         if (base === "d") {
-          try { norm = await streamDecompress("deflate", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap }; } catch (e) {}
+          try { norm = await streamDecompress("deflate", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap, preview }; } catch (e) {}
         }
         if (base === "z") {
-          try { norm = await streamDecompress("gzip", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap }; } catch (e) {}
+          try { norm = await streamDecompress("gzip", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap, preview }; } catch (e) {}
         }
         if (base === "b") {
-          try { norm = await streamDecompress("brotli", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap }; } catch (e) {}
+          try { norm = await streamDecompress("brotli", data); return { text: restoreNewlinesLossless(norm, nl), langId, wrap, preview }; } catch (e) {}
         }
       }
 
       const fallback = LZString.decompressFromEncodedURIComponent(payload);
-      return { text: (fallback == null ? "" : fallback), langId: "auto", wrap: false };
+      return { text: (fallback == null ? "" : fallback), langId: "auto", wrap: false, preview: false };
     }
 
     function applyWrapState() {
@@ -965,7 +1061,64 @@
       $text.setAttribute("wrap", wrapEnabled ? "soft" : "off");
     }
 
+    /* ── HTML preview helpers ── */
+
+    function effectiveLang() {
+      return autoEnabled ? (currentShownLang || "plaintext") : (lockedLang || "plaintext");
+    }
+
+    function isHtmlActive() {
+      return effectiveLang() === "html";
+    }
+
+    function applyPreviewState() {
+      document.body.classList.toggle("previewing", previewEnabled);
+
+      if (previewEnabled && isHtmlActive()) {
+        document.body.classList.remove("topbar-visible");
+        const html = $text.value || "";
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        $previewFrame.src = url;
+        $previewFrame.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
+      } else {
+        previewEnabled = false;
+        document.body.classList.remove("previewing");
+        document.body.classList.remove("topbar-visible");
+        $previewFrame.removeAttribute("src");
+      }
+    }
+
+    function updatePreviewButtonVisibility() {
+      $previewBtn.style.display = isHtmlActive() ? "inline-flex" : "none";
+      $previewBtn.textContent = previewEnabled ? "Edit" : "Preview";
+
+      if (previewEnabled && !isHtmlActive()) {
+        previewEnabled = false;
+        applyPreviewState();
+      }
+    }
+
+    function togglePreview() {
+      if (!isHtmlActive()) return;
+      previewEnabled = !previewEnabled;
+      applyPreviewState();
+      updatePreviewButtonVisibility();
+      saveToUrlDebounced();
+    }
+
+    /* ── end preview helpers ── */
+
     function updateTitleFromFirstLine(text) {
+      /* If lang is HTML, try to extract <title> from the content */
+      if (isHtmlActive()) {
+        const m = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        if (m && m[1].trim()) {
+          document.title = m[1].trim();
+          return;
+        }
+      }
+
       const firstLine = (text.split("\n")[0] || "").trim();
       if (firstLine.startsWith("#")) {
         const t = firstLine.replace(/^#+\s*/, "").trim();
@@ -1186,8 +1339,8 @@
     function downloadCurrentText() {
       const text = $text.value || "";
 
-      const effectiveLang = autoEnabled ? (currentShownLang || "plaintext") : (lockedLang || "plaintext");
-      const meta = langToDownloadMeta(effectiveLang);
+      const effectiveLangId = effectiveLang();
+      const meta = langToDownloadMeta(effectiveLangId);
 
       const title = document.title;
       const base = location.hostname ? location.hostname : "local";
@@ -1240,6 +1393,7 @@
       currentShownLang = shown || "plaintext";
 
       updateOptionLabels($langSelect.value);
+      updatePreviewButtonVisibility();
 
       requestAnimationFrame(() => {
         recomputeMetrics();
@@ -1262,12 +1416,13 @@
 
     async function applyFromUrlHash() {
       const hash = (location.hash || "").replace(/^#/, "");
-      const { text, langId, wrap } = await decodeFromHashPayload(hash);
+      const { text, langId, wrap, preview } = await decodeFromHashPayload(hash);
 
       isApplyingFromHash = true;
       try {
         $text.value = text || "";
         wrapEnabled = !!wrap;
+        previewEnabled = !!preview;
 
         try { $text.setSelectionRange(0, 0); } catch (e) {}
 
@@ -1281,6 +1436,7 @@
         }
 
         render();
+        applyPreviewState();
 
         requestAnimationFrame(() => {
           forceScrollTopLeft();
@@ -1316,6 +1472,9 @@
       recomputeMetrics();
 
       $text.addEventListener("input", () => {
+        if (previewEnabled && isHtmlActive()) {
+          applyPreviewState();
+        }
         render();
         saveToUrlDebounced();
       });
@@ -1326,6 +1485,40 @@
       $text.addEventListener("select", () => requestAnimationFrame(ensureCaretVisible));
 
       $lines.addEventListener("click", toggleWrap);
+
+      $previewBtn.addEventListener("click", togglePreview);
+
+      /* ── topbar auto-hide in preview mode ── */
+      let topbarHideTimer = null;
+
+      function showTopbar() {
+        if (!previewEnabled) return;
+        if (topbarHideTimer) { clearTimeout(topbarHideTimer); topbarHideTimer = null; }
+        document.body.classList.add("topbar-visible");
+      }
+
+      function scheduleHideTopbar() {
+        if (!previewEnabled) return;
+        if (topbarHideTimer) clearTimeout(topbarHideTimer);
+        topbarHideTimer = setTimeout(() => {
+          document.body.classList.remove("topbar-visible");
+          topbarHideTimer = null;
+        }, 600);
+      }
+
+      $previewHitzone.addEventListener("mouseenter", showTopbar);
+      $previewHitzone.addEventListener("touchstart", showTopbar, { passive: true });
+
+      document.getElementById("topbar").addEventListener("mouseenter", () => {
+        if (topbarHideTimer) { clearTimeout(topbarHideTimer); topbarHideTimer = null; }
+      });
+      document.getElementById("topbar").addEventListener("mouseleave", scheduleHideTopbar);
+
+      $previewHitzone.addEventListener("mouseleave", (e) => {
+        /* only hide if not entering the topbar */
+        const topbar = document.getElementById("topbar");
+        if (!topbar.contains(e.relatedTarget)) scheduleHideTopbar();
+      });
 
       $langSelect.addEventListener("change", () => {
         if (suppressLangChange) return;
