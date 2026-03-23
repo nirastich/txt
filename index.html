@@ -445,6 +445,25 @@
     }
 
     #mdPreview .md-body sup a{ font-size:.8em; }
+
+    /* ── HTML Preview ── */
+
+    #htmlPreview{
+      position:absolute;
+      inset:0;
+      display:none;
+      background:#fff;
+    }
+
+    body.html-preview #htmlPreview{ display:block; }
+    body.html-preview #scroller{ display:none; }
+
+    #htmlPreviewFrame{
+      width:100%;
+      height:100%;
+      border:none;
+      background:#fff;
+    }
   </style>
 </head>
 
@@ -463,6 +482,14 @@
       <select id="langSelect" title="Language"></select>
 
       <button id="mdToggleBtn" class="topBtn hidden" type="button" title="Toggle Markdown preview">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+
+      <button id="htmlToggleBtn" class="topBtn hidden" type="button" title="Toggle HTML preview">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -489,6 +516,7 @@
       </div>
     </div>
     <div id="mdPreview"><div class="md-body" id="mdBody"></div></div>
+    <div id="htmlPreview"><iframe id="htmlPreviewFrame" sandbox="allow-scripts allow-same-origin" title="HTML Preview"></iframe></div>
     <pre id="measure" aria-hidden="true"></pre>
   </div>
 
@@ -938,6 +966,8 @@
     const $downloadBtn = document.getElementById("downloadBtn");
     const $mdToggleBtn = document.getElementById("mdToggleBtn");
     const $mdBody = document.getElementById("mdBody");
+    const $htmlToggleBtn = document.getElementById("htmlToggleBtn");
+    const $htmlPreviewFrame = document.getElementById("htmlPreviewFrame");
 
     const baseLabelById = new Map(LANGS.map(l => [l.id, l.label]));
     const dynamicLangs = new Set();
@@ -950,6 +980,7 @@
     let wrapEnabled = false;
     let suppressLangChange = false;
     let mdPreviewActive = false;
+    let htmlPreviewActive = false;
 
     let metrics = { charW: 8, lineH: 20, padL: 0, padT: 0 };
     let currentShownLang = "plaintext";
@@ -1510,18 +1541,36 @@ ${bodyHtml}
       return eLang === "markdown";
     }
 
-    function updateMdButtons() {
+    function isHtmlActive() {
+      const eLang = autoEnabled ? currentShownLang : lockedLang;
+      return eLang === "html";
+    }
+
+    function updatePreviewButtons() {
       const isMd = isMarkdownActive();
+      const isHtml = isHtmlActive();
+
+      /* Markdown button */
       $mdToggleBtn.classList.toggle("hidden", !isMd);
       $mdToggleBtn.classList.toggle("active", mdPreviewActive && isMd);
 
-      const htmlMode = isMd && mdPreviewActive;
-      $downloadBtn.innerHTML = htmlMode ? DL_ICON_HTML : DL_ICON_DEFAULT;
-      $downloadBtn.title = htmlMode ? "Download as HTML" : "Download";
+      /* HTML button */
+      $htmlToggleBtn.classList.toggle("hidden", !isHtml);
+      $htmlToggleBtn.classList.toggle("active", htmlPreviewActive && isHtml);
 
+      /* Download button style: show HTML icon only when md-preview is active (converts md to html) */
+      const htmlDlMode = (isMd && mdPreviewActive);
+      $downloadBtn.innerHTML = htmlDlMode ? DL_ICON_HTML : DL_ICON_DEFAULT;
+      $downloadBtn.title = htmlDlMode ? "Download as HTML" : "Download";
+
+      /* Deactivate previews if language switched away */
       if (!isMd && mdPreviewActive) {
         mdPreviewActive = false;
         document.body.classList.remove("md-preview");
+      }
+      if (!isHtml && htmlPreviewActive) {
+        htmlPreviewActive = false;
+        document.body.classList.remove("html-preview");
       }
     }
 
@@ -1537,16 +1586,35 @@ ${bodyHtml}
       }
     }
 
+    function updateHtmlPreview() {
+      if (!htmlPreviewActive) return;
+      const text = $text.value || "";
+      $htmlPreviewFrame.srcdoc = text;
+    }
+
     function toggleMdPreview() {
       mdPreviewActive = !mdPreviewActive;
       document.body.classList.toggle("md-preview", mdPreviewActive);
       $mdToggleBtn.classList.toggle("active", mdPreviewActive);
 
-      $downloadBtn.innerHTML = mdPreviewActive ? DL_ICON_HTML : DL_ICON_DEFAULT;
-      $downloadBtn.title = mdPreviewActive ? "Download as HTML" : "Download";
+      const htmlDlMode = mdPreviewActive;
+      $downloadBtn.innerHTML = htmlDlMode ? DL_ICON_HTML : DL_ICON_DEFAULT;
+      $downloadBtn.title = htmlDlMode ? "Download as HTML" : "Download";
 
       if (mdPreviewActive) {
         updateMdPreview();
+      } else {
+        $text.focus();
+      }
+    }
+
+    function toggleHtmlPreview() {
+      htmlPreviewActive = !htmlPreviewActive;
+      document.body.classList.toggle("html-preview", htmlPreviewActive);
+      $htmlToggleBtn.classList.toggle("active", htmlPreviewActive);
+
+      if (htmlPreviewActive) {
+        updateHtmlPreview();
       } else {
         $text.focus();
       }
@@ -1576,7 +1644,10 @@ ${bodyHtml}
       currentShownLang = shown || "plaintext";
 
       updateOptionLabels($langSelect.value);
-      updateMdButtons();
+      updatePreviewButtons();
+
+      if (mdPreviewActive) updateMdPreview();
+      if (htmlPreviewActive) updateHtmlPreview();
 
       requestAnimationFrame(() => {
         recomputeMetrics();
@@ -1684,6 +1755,8 @@ ${bodyHtml}
       $downloadBtn.addEventListener("click", () => {
         if (mdPreviewActive && isMarkdownActive()) {
           downloadAsHtml();
+        } else if (htmlPreviewActive && isHtmlActive()) {
+          downloadCurrentText();
         } else {
           downloadCurrentText();
         }
@@ -1691,6 +1764,7 @@ ${bodyHtml}
       });
 
       $mdToggleBtn.addEventListener("click", toggleMdPreview);
+      $htmlToggleBtn.addEventListener("click", toggleHtmlPreview);
 
       window.addEventListener("resize", () => {
         recomputeMetrics();
