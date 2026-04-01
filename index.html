@@ -7,8 +7,10 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.ico">
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.44/dist/katex.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.44/dist/katex.min.js"></script>
 
   <style>
     :root{
@@ -409,7 +411,7 @@
     #mdPreview .md-body tr:nth-child(even){
       background:rgba(255,255,255,.02);
     }
-    
+
     #mdPreview .md-body td[align="center"],
     #mdPreview .md-body th[align="center"]{ text-align:center; }
     #mdPreview .md-body td[align="right"],
@@ -445,6 +447,22 @@
     }
 
     #mdPreview .md-body sup a{ font-size:.8em; }
+
+    /* LaTeX */
+    #mdPreview .md-body .katex{
+      color:#fff;
+    }
+
+    #mdPreview .md-body .katex-display{
+      margin:0 0 1em;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:.2em 0;
+    }
+
+    #mdPreview .md-body .katex-display > .katex{
+      max-width:100%;
+    }
 
     /* ── HTML Preview ── */
 
@@ -986,6 +1004,14 @@
     let currentShownLang = "plaintext";
     const DL_ICON_DEFAULT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2h4v8h4l-6 8-6-8h4z"/><rect x="3" y="21" width="18" height="2" rx=".5"/></svg>';
     const DL_ICON_HTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2h4v8h4l-6 8-6-8h4z"/><rect x="3" y="21" width="18" height="2" rx=".5"/><path d="M5 3L1.5 10 5 17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/><path d="M19 3L22.5 10 19 17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>';
+    const KATEX_CSS_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.44/dist/katex.min.css";
+    const KATEX_RENDER_OPTIONS = Object.freeze({
+      throwOnError: false,
+      strict: "ignore",
+      output: "htmlAndMathml"
+    });
+
+    let markedLatexConfigured = false;
 
     /* ── Marked config ── */
     if (window.marked) {
@@ -1009,6 +1035,165 @@
         "\"":"&quot;",
         "'":"&#39;"
       }[c]));
+    }
+
+    function renderKatexExpression(tex, displayMode) {
+      const source = String(tex == null ? "" : tex).trim();
+      if (!source) return "";
+
+      if (!window.katex || typeof window.katex.renderToString !== "function") {
+        return displayMode
+          ? '<div class="katex-fallback">' + escapeHtml(source) + '</div>'
+          : escapeHtml(source);
+      }
+
+      return katex.renderToString(source, {
+        ...KATEX_RENDER_OPTIONS,
+        displayMode
+      });
+    }
+
+    function configureMarkedLatex() {
+      if (markedLatexConfigured || !window.marked) return;
+      markedLatexConfigured = true;
+
+      const blockKatexDollar = {
+        name: "blockKatexDollar",
+        level: "block",
+        start(src) {
+          const m = src.match(/^[ \t]{0,3}\$\$/m);
+          return m ? m.index : undefined;
+        },
+        tokenizer(src) {
+          let match = src.match(/^[ \t]{0,3}\$\$[ \t]*\n([\s\S]+?)\n[ \t]{0,3}\$\$(?:\n+|$)/);
+          if (!match) match = src.match(/^[ \t]{0,3}\$\$([^\n]+?)\$\$(?:\n+|$)/);
+          if (!match) return;
+          return {
+            type: "blockKatexDollar",
+            raw: match[0],
+            text: match[1].trim()
+          };
+        },
+        renderer(token) {
+          return renderKatexExpression(token.text, true) + "\n";
+        }
+      };
+
+      const blockKatexBracket = {
+        name: "blockKatexBracket",
+        level: "block",
+        start(src) {
+          const m = src.match(/^[ \t]{0,3}\\\[/m);
+          return m ? m.index : undefined;
+        },
+        tokenizer(src) {
+          let match = src.match(/^[ \t]{0,3}\\\[[ \t]*\n([\s\S]+?)\n[ \t]{0,3}\\\](?:\n+|$)/);
+          if (!match) match = src.match(/^[ \t]{0,3}\\\[([^\n]+?)\\\](?:\n+|$)/);
+          if (!match) return;
+          return {
+            type: "blockKatexBracket",
+            raw: match[0],
+            text: match[1].trim()
+          };
+        },
+        renderer(token) {
+          return renderKatexExpression(token.text, true) + "\n";
+        }
+      };
+
+      const inlineKatexParen = {
+        name: "inlineKatexParen",
+        level: "inline",
+        start(src) {
+          const idx = src.indexOf("\\(");
+          return idx >= 0 ? idx : undefined;
+        },
+        tokenizer(src) {
+          if (!src.startsWith("\\(")) return;
+
+          let i = 2;
+          while (i < src.length - 1) {
+            if (src[i] === "\\" && src[i + 1] === ")") {
+              const text = src.slice(2, i);
+              if (!text.trim()) return;
+              return {
+                type: "inlineKatexParen",
+                raw: src.slice(0, i + 2),
+                text
+              };
+            }
+            i++;
+          }
+        },
+        renderer(token) {
+          return renderKatexExpression(token.text, false);
+        }
+      };
+
+      const inlineKatexDollar = {
+        name: "inlineKatexDollar",
+        level: "inline",
+        start(src) {
+          for (let i = 0; i < src.length; i++) {
+            if (src[i] !== "$") continue;
+            if (src[i - 1] === "\\") continue;
+            if (src[i - 1] === "$" || src[i + 1] === "$") continue;
+            return i;
+          }
+          return undefined;
+        },
+        tokenizer(src) {
+          if (!src.startsWith("$")) return;
+          if (src[1] === "$") return;
+          if (!src[1] || /\s/.test(src[1])) return;
+
+          let i = 1;
+          while (i < src.length) {
+            const ch = src[i];
+
+            if (ch === "\\") {
+              i += 2;
+              continue;
+            }
+
+            if (ch === "\n") return;
+
+            if (ch === "$") {
+              if (src[i + 1] === "$") return;
+              if (/\s/.test(src[i - 1])) return;
+
+              const text = src.slice(1, i);
+              if (!text.trim()) return;
+
+              return {
+                type: "inlineKatexDollar",
+                raw: src.slice(0, i + 1),
+                text
+              };
+            }
+
+            i++;
+          }
+        },
+        renderer(token) {
+          return renderKatexExpression(token.text, false);
+        }
+      };
+
+      marked.use({
+        extensions: [
+          blockKatexDollar,
+          blockKatexBracket,
+          inlineKatexParen,
+          inlineKatexDollar
+        ]
+      });
+    }
+
+    function parseMarkdown(text) {
+      if (!window.marked) return escapeHtml(text || "");
+      configureMarkedLatex();
+      return marked.parse(prepareMdText(text || ""));
     }
 
     function u8ToB64Url(u8) {
@@ -1452,7 +1637,7 @@
     }
 
     function buildHtmlDocument(mdText) {
-      const bodyHtml = marked.parse(prepareMdText(mdText));
+      const bodyHtml = parseMarkdown(mdText);
       const title = document.title !== "TXT" ? escapeHtml(document.title) : "Document";
 
       return `<!doctype html>
@@ -1461,6 +1646,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
+<link rel="stylesheet" href="${KATEX_CSS_URL}">
 <style>
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -1498,6 +1684,8 @@ tr:nth-child(even){background:#fafafa}
 hr{border:none;border-top:1px solid #e5e5e5;margin:2em 0}
 img{max-width:100%;height:auto;border-radius:6px;margin:.5em 0}
 input[type="checkbox"]{margin-right:.4em}
+.katex-display{margin:0 0 1em;overflow-x:auto;overflow-y:hidden;padding:.2em 0}
+.katex-display > .katex{max-width:100%}
 </style>
 </head>
 <body>
@@ -1528,7 +1716,7 @@ ${bodyHtml}
     }
 
     /* ── Markdown-specific UI ── */
-    
+
     function prepareMdText(text) {
       return (text || "")
         .replace(/\r\n?/g, "\n")
@@ -1550,20 +1738,16 @@ ${bodyHtml}
       const isMd = isMarkdownActive();
       const isHtml = isHtmlActive();
 
-      /* Markdown button */
       $mdToggleBtn.classList.toggle("hidden", !isMd);
       $mdToggleBtn.classList.toggle("active", mdPreviewActive && isMd);
 
-      /* HTML button */
       $htmlToggleBtn.classList.toggle("hidden", !isHtml);
       $htmlToggleBtn.classList.toggle("active", htmlPreviewActive && isHtml);
 
-      /* Download button style: show HTML icon only when md-preview is active (converts md to html) */
       const htmlDlMode = (isMd && mdPreviewActive);
       $downloadBtn.innerHTML = htmlDlMode ? DL_ICON_HTML : DL_ICON_DEFAULT;
       $downloadBtn.title = htmlDlMode ? "Download as HTML" : "Download";
 
-      /* Deactivate previews if language switched away */
       if (!isMd && mdPreviewActive) {
         mdPreviewActive = false;
         document.body.classList.remove("md-preview");
@@ -1576,8 +1760,7 @@ ${bodyHtml}
 
     function updateMdPreview() {
       if (!mdPreviewActive || !window.marked) return;
-      const text = ($text.value || "").replace(/\r\n?/g, "\n");
-      $mdBody.innerHTML = marked.parse(prepareMdText($text.value));
+      $mdBody.innerHTML = parseMarkdown($text.value);
 
       if (window.hljs) {
         $mdBody.querySelectorAll("pre code").forEach(block => {
