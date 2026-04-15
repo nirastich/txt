@@ -1,8 +1,8 @@
-# TXT (txt.73.nu)
+# TXT (text.73.nu)
 
 A tiny in-browser text and code viewer/editor that keeps everything in the URL.
 
-**Live:** https://txt.73.nu
+**Live:** https://text.73.nu
 
 ## What it does
 - Edit text directly in the browser
